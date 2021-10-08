@@ -53,10 +53,8 @@ if waitForUpdate > 0:
   print('--------------')
   print('MILESTONE: TokenURI Updated!')
   print(newValue)
+  os.system("afplay alert.wav") 
 
-
-os.system("afplay alert.wav") 
-#playsound.playsound('/sounds/alert.wav', True)
 
 
 threadCount = 50
