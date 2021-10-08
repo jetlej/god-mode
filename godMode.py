@@ -173,25 +173,27 @@ for row in result:
 #print('--------')
 #print(counts)
 
-cf = pd.json_normalize(counts)
-cf.to_csv('counts.csv', index=False, encoding='utf-8')
-print('MILESTONE: Counts CSV Created')
+#cf = pd.json_normalize(counts)
+#cf.to_csv('counts.csv', index=False, encoding='utf-8')
+#print('MILESTONE: Counts CSV Created')
 
 
 # Get rarity score for each token
 tokens = []
 for row in list(result):
     tokenObj = row
-    for attr, value in list(row.items()):
-        totalScore = 1 
+    multiplyScore = 1
+    sumScore = 0 
+    for attr, value in list(row.items()):    
         if attr != 'id':
             count = counts[attr][value]
             #tokenObj[attr] = str(value) + ' - ' + str(count)
             tokenObj[str(attr) + ' #'] = count
+            sumScore = sumScore + count
             score = count / tokenCount
-            if score > 0:
-                totalScore = totalScore * score
-    tokenObj['score'] = totalScore
+            multiplyScore = multiplyScore * score
+    tokenObj['Score - %'] = multiplyScore
+    tokenObj['Score - Sum'] = sumScore
     tokenObj['link'] = 'https://opensea.io/assets/' + token_contract_address + '/' + row['id']
     tokens.append(tokenObj)
 
@@ -200,7 +202,7 @@ for row in list(result):
 
 
 # Sort them by rarity score, and get OpenSea prices for the top 200
-sortedTokens = sorted(tokens, key=lambda x: x["score"])
+sortedTokens = sorted(tokens, key=lambda x: x["Score - Sum"])
 
 i = 0
 openseaApi = 'https://api.opensea.io/api/v1/asset/' + token_contract_address + '/'
