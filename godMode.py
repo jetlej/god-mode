@@ -171,7 +171,13 @@ for file in fstack:
         try:
             data = json.load(f)
             tokenId = Path(f.name)
-            obj = {"id": tokenId.stem, "image": data["image"]}
+            
+            image = data["image"]
+            if 'ipfs://' in image:
+                split = image.split('://')
+                image = 'https://ipfs.infura.io:5001/api/v0/cat?arg=' + split[1]
+
+            obj = {"id": tokenId.stem, "image": image}
             for trait in data["attributes"]:
                 #print(trait)
                 label = trait["trait_type"]
