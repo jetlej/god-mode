@@ -15,30 +15,50 @@ if os.path.isfile("errors/"):
 if os.path.isfile("loot/"):
     os.remove("loot/")
 
+infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
+infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
 # Get the tokenURI from https://checkmynft.com/
-ifps = 0
-waitForUpdate = 1
-
-url_stub = "https://api.themekaverse.com/meka/"
-#url_stub = 'https://www.lazylionsnft.com/api/'
-#url_stub = "ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/"
-#url_stub = "https://api.gevols.com/token/"
-
-# Mekk's
-token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
-# GEVOLS
-#token_contract_address = '0x34b4df75a17f8b3a6eff6bba477d39d701f5e92c'
-# BAYC
-#token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
-# Lazy Lions
-#token_contract_address = '0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0'
-
-tokenCount = 100
+ipfs = False
+base64 = 0
+useEtherscan = 0
+waitForUpdate = False
+skipScrape = True
+tokenCount = 9999
 openSeaLimit = 0
 
+# Mekk's
+#url_stub = "https://api.themekaverse.com/meka/"
+#token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
 
-if waitForUpdate > 0:
+# GEVOLS
+#url_stub = "https://api.gevols.com/token/"
+#token_contract_address = '0x34b4df75a17f8b3a6eff6bba477d39d701f5e92c'
+
+# Cool Cats
+url_stub = 'https://api.coolcatsnft.com/cat/'
+token_contract_address = '0x1a92f7381b9f03921564a437210bb9396471050c'
+
+# BAYC (IPFS)
+#url_stub = 'ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/'
+#token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
+
+# Lazy Lions (IPFS)
+#url_stub = 'https://www.lazylionsnft.com/api/'
+#token_contract_address = '0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0'
+
+
+if 'ipfs://' in url_stub:
+    ipfs = True
+    split = url_stub.split('://')
+    url_stub = split[1]
+
+#quit()
+
+
+
+
+if waitForUpdate:
   r = requests.get(url_stub + '1?v=1', timeout=10)
   initValue = r.text
   print(initValue)
@@ -62,76 +82,77 @@ if waitForUpdate > 0:
   os.system("afplay alert.wav") 
 
 
+if not skipScrape:
 
-threadCount = 50
-tokensPerThread = math.ceil(tokenCount / threadCount)
+    threadCount = 50
+    tokensPerThread = math.ceil(tokenCount / threadCount)
 
-def makeFolds():
-    try:
-        os.mkdir("loot")
-    except:
-        pass
-
-    try:
-        os.mkdir("errors")
-    except:
-        pass
-
-def getThread(targetStack):
-    for url in targetStack:
-        # print 'this is url => ',url
-        fname = str(url.split("/").pop())
+    def makeFolders():
         try:
-            r = requests.get(url,timeout=10)
+            os.mkdir("loot")
+        except:
+            pass
 
-            with open("loot/" + fname +".json","w" ) as f:
-                f.write(r.text)
-                f.flush()
+        try:
+            os.mkdir("errors")
+        except:
+            pass
 
-        except Exception as e:
-            #print e
-            with open("errors/" + fname + ".txt","w") as f:
-                f.write("Error for this => " + fname + "\n")
-                f.write(str(e))
+    def getThread(targetStack):
+        for url in targetStack:
+            # print 'this is url => ',url
+            fname = str(url.split("/").pop())
+            try:
+                if (ipfs):
+                    params = (('arg', url),)
+                    r = requests.post('https://ipfs.infura.io:5001/api/v0/cat', params=params, auth=(infuraIpfsId,infuraIpfsSecret))
+                else: 
+                    r = requests.get(url,timeout=10)
+                with open("loot/" + fname +".json","w" ) as f:
+                    f.write(r.text)
+                    f.flush()
 
-def generate_stack(url_stub):
-    #Create 10 list/arrays of 1000 urls (contained in a list/array) to feed into threads
-    stack = []
-    county = 0
-    for x in range(0, threadCount):
-        targetStack = []
-        for y in range(0, tokensPerThread):
-            if x * y <= tokenCount:
+            except Exception as e:
+                #print e
+                with open("errors/" + fname + ".txt","w") as f:
+                    f.write("Error for this => " + fname + "\n")
+                    f.write(str(e))
+
+    def generate_stack(url_stub):
+        #Create 10 list/arrays of 1000 urls (contained in a list/array) to feed into threads
+        stack = []
+        county = 0
+        for x in range(0, threadCount):
+            targetStack = []
+            for y in range(0, tokensPerThread):
                 county+=1
                 targetStack.append(url_stub + str(county))
-        stack.append(targetStack)
-    return stack
+            stack.append(targetStack)
+        return stack
 
-makeFolds()
-stack = generate_stack(url_stub)
-threadStack = []
-for targets in stack:
-    t = threading.Thread(target=getThread,args=([targets]))
-    threadStack.append(t)
-    t.start()
+    makeFolders()
+    stack = generate_stack(url_stub)
+    threadStack = []
+    for targets in stack:
+        t = threading.Thread(target=getThread,args=([targets]))
+        threadStack.append(t)
+        t.start()
 
 
-tstamp = time.time()
-while True:
-    t_temp = []
-    for t in threadStack:
-        check = t.is_alive()
-        if check:
-            t_temp.append(t)
-    threadStack = t_temp
-    if not threadStack:
-        break
-    time.sleep(10)
+    tstamp = time.time()
+    while True:
+        t_temp = []
+        for t in threadStack:
+            check = t.is_alive()
+            if check:
+                t_temp.append(t)
+        threadStack = t_temp
+        if not threadStack:
+            break
+        time.sleep(10)
+        print('elapsed time => ' + str(time.time() - tstamp))
     print('elapsed time => ' + str(time.time() - tstamp))
-print('elapsed time => ' + str(time.time() - tstamp))
-print('MILESTONE: tokenURIs Download Complete')
-
-
+    print('MILESTONE: tokenURIs Download Complete')
 
 
 
