@@ -8,13 +8,6 @@ import ast
 from pathlib import Path
 import pandas as pd
 
-if os.path.isfile("tokens.csv"):
-    os.remove("tokens.csv")
-if os.path.isfile("errors/"):
-    os.remove("errors/")
-if os.path.isfile("loot/"):
-    os.remove("loot/")
-
 infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
 infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
@@ -55,7 +48,13 @@ if 'ipfs://' in url_stub:
 
 #quit()
 
-
+if not skipScrape:
+    if os.path.isfile("tokens.csv"):
+        os.remove("tokens.csv")
+    if os.path.isfile("errors/"):
+        os.remove("errors/")
+    if os.path.isfile("loot/"):
+        os.remove("loot/")
 
 
 if waitForUpdate:
@@ -166,6 +165,7 @@ fstack = [folder + fname for fname in os.listdir(folder)]
 dict = {}
 total = 0
 result = []
+columnOrder = ['id', 'score', 'score %', 'price', 'link', 'image']
 for file in fstack:
     with open(file, "r") as f:
         try:
@@ -180,14 +180,16 @@ for file in fstack:
             obj = {"id": tokenId.stem, "image": image}
             for trait in data["attributes"]:
                 #print(trait)
+                if not str(trait["trait_type"]) in columnOrder:
+                    columnOrder.append(str(trait["trait_type"]))
+                    columnOrder.append(str(trait["trait_type"]) + ' #')
                 label = trait["trait_type"]
                 obj[label] = trait["value"]
             #print(obj)
             result.append(obj)
         except Exception as e:
+            print('Skipped ' + f.name)
             print(e)
-            print('skipped one')
-
 
 # Count the total traits
 counts = {}
@@ -223,8 +225,8 @@ for row in list(result):
             sumScore = sumScore + count
             score = count / tokenCount
             multiplyScore = multiplyScore * score
-    tokenObj['Score - %'] = multiplyScore
-    tokenObj['Score - Sum'] = sumScore
+    tokenObj['score'] = sumScore
+    tokenObj['score %'] = multiplyScore
     tokenObj['link'] = 'https://opensea.io/assets/' + token_contract_address + '/' + row['id']
     tokens.append(tokenObj)
 
@@ -233,7 +235,7 @@ for row in list(result):
 
 
 # Sort them by rarity score, and get OpenSea prices for the top 200
-sortedTokens = sorted(tokens, key=lambda x: x["Score - Sum"])
+sortedTokens = sorted(tokens, key=lambda x: x["score"])
 
 i = 0
 openseaApi = 'https://api.opensea.io/api/v1/asset/' + token_contract_address + '/'
@@ -270,7 +272,13 @@ for row in sortedTokens:
 
 # Export JSON to CSV
 df = pd.json_normalize(sortedTokens)
-df.to_csv('tokens.csv', index=False, encoding='utf-8')
-
 print('MILESTONE: Tokens CSV Created')
+df_reorder = df[columnOrder]
+df_reorder.to_csv('tokens.csv', index=False, encoding='utf-8')
+
+print('MILESTONE: Tokens CSV Sorted')
+
+
+
+print('DONE!!!!!')
 
