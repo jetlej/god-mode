@@ -8,6 +8,12 @@ import ast
 from pathlib import Path
 import pandas as pd
 
+if os.path.isfile("tokens.csv"):
+    os.remove("tokens.csv")
+if os.path.isfile("errors/"):
+    os.remove("errors/")
+if os.path.isfile("loot/"):
+    os.remove("loot/")
 
 
 # Get the tokenURI from https://checkmynft.com/
