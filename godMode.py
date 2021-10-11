@@ -7,18 +7,23 @@ import json
 import ast
 from pathlib import Path
 import pandas as pd
-
+import shutil
 infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
 infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
-# Get the tokenURI from https://checkmynft.com/
 ipfs = False
 base64 = 0
 useEtherscan = 0
 waitForUpdate = False
 skipScrape = True
-tokenCount = 9999
-openSeaLimit = 0
+tokenCount = 10000
+openSeaLimit = 500
+
+url_stub = 'ipfs://QmUBZpfqwzZxw9pQB6RykMpetW2X5xxVhSHm1TyYCZmGV2/'
+token_contract_address = '0xbea8123277142de42571f1fac045225a1d347977'
+
+#url_stub = 'https://raw.githubusercontent.com/TheHumanoids/metadata/main/'
+#token_contract_address = '0x3a5051566b2241285be871f650c445a88a970edd'
 
 # Mekk's
 #url_stub = "https://api.themekaverse.com/meka/"
@@ -29,12 +34,24 @@ openSeaLimit = 0
 #token_contract_address = '0x34b4df75a17f8b3a6eff6bba477d39d701f5e92c'
 
 # Cool Cats
-url_stub = 'https://api.coolcatsnft.com/cat/'
-token_contract_address = '0x1a92f7381b9f03921564a437210bb9396471050c'
+#url_stub = 'https://api.coolcatsnft.com/cat/'
+#token_contract_address = '0x1a92f7381b9f03921564a437210bb9396471050c'
 
 # BAYC (IPFS)
 #url_stub = 'ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/'
 #token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
+
+# Anonymice
+#url_stub = MUST LOOP THROUGH ETHERSCAN, THEN CONVERT FROM BASE64
+#token_contract_address = '0xbad6186E92002E312078b5a1dAfd5ddf63d3f731'
+
+# Humanoids
+#url_stub = 'https://raw.githubusercontent.com/TheHumanoids/metadata/main/'
+#token_contract_address = '0x3a5051566b2241285be871f650c445a88a970edd'
+
+# SVS
+#url_stub = 'ipfs://bafybeic26wp7ck2bsjhjm5pcdigxqebnthqrmugsygxj5fov2r2qwhxyqu/'
+#token_contract_address = '0x219b8ab790decc32444a6600971c7c3718252539'
 
 # Lazy Lions (IPFS)
 #url_stub = 'https://www.lazylionsnft.com/api/'
@@ -48,13 +65,19 @@ if 'ipfs://' in url_stub:
 
 #quit()
 
-if not skipScrape:
+if skipScrape == False:
     if os.path.isfile("tokens.csv"):
         os.remove("tokens.csv")
-    if os.path.isfile("errors/"):
-        os.remove("errors/")
-    if os.path.isfile("loot/"):
-        os.remove("loot/")
+    try:
+        shutil.rmtree('errors/')
+    except OSError as e:
+        print(e.strerror)
+    try:
+        shutil.rmtree('loot/')
+    except OSError as e:
+        print(e.strerror)
+
+#quit()
 
 
 if waitForUpdate:
@@ -81,8 +104,7 @@ if waitForUpdate:
   os.system("afplay alert.wav") 
 
 
-if not skipScrape:
-
+if skipScrape == False:
     threadCount = 50
     tokensPerThread = math.ceil(tokenCount / threadCount)
 
@@ -171,13 +193,15 @@ for file in fstack:
         try:
             data = json.load(f)
             tokenId = Path(f.name)
-            
-            image = data["image"]
+            if "image" in data:
+                image = data["image"]
+            else:
+                image = data["image_url"]
             if 'ipfs://' in image:
                 split = image.split('://')
                 image = 'https://ipfs.infura.io:5001/api/v0/cat?arg=' + split[1]
 
-            obj = {"id": tokenId.stem, "image": image}
+            obj = {"id": tokenId.stem, "image": image, "price": ''}
             for trait in data["attributes"]:
                 #print(trait)
                 if not str(trait["trait_type"]) in columnOrder:
@@ -237,48 +261,75 @@ for row in list(result):
 # Sort them by rarity score, and get OpenSea prices for the top 200
 sortedTokens = sorted(tokens, key=lambda x: x["score"])
 
-i = 0
 openseaApi = 'https://api.opensea.io/api/v1/asset/' + token_contract_address + '/'
+threadCount = 50
+tokensPerThread = math.ceil(openSeaLimit / threadCount)
 
-for row in sortedTokens:
-    if i > openSeaLimit:
-      break
-    # get the price
+def getThread(targetStack):
+    for link in targetStack:
+        url = link["url"]
+        count = link["index"]
+        #print(url, 'url')
+        # print 'this is url => ',url
+        # id = str(url.split('asset/' + token_contract_address + '/').pop())
+        try:
+            r = requests.get(url, timeout=10)
+            data = r.text
+            data = json.loads(data)
+            owner = data["owner"]["address"]
+            for order in data["orders"]:
+                if order["maker"]["address"] == owner:
+                    price = int(order["base_price"]) / 1000000000000000000
+                    print(price)
+                    sortedTokens[count]["price"] = price
+                    break
 
-    price = 0
-    try:
-        r = requests.get(openseaApi + str(row["id"]), timeout=10)
-        data = r.text
-        data = json.loads(data)
-        #print(data)
-        owner = data["owner"]["address"]
-        print('owner', owner)
-        for order in data["orders"]:
-            if order["maker"]["address"] == owner:
-                price = int(order["base_price"]) / 1000000000000000000
-                print(price)
-                sortedTokens[i]["price"] = price
-                break
-    except Exception as e:
-        print('Error with OpenSea API')
-        print(e)
-    if price == 0:
-        print('Not for sale')
-    i = i + 1
+        except Exception as e:
+            print('OpenSea scrape error: ' + str(e))
 
-# Print as JSON, can remove
-#with open("tokens.json", "w") as outfile:
-#     json.dump(result, outfile)
+def generate_stack():
+    #Create 10 list/arrays of 1000 urls (contained in a list/array) to feed into threads
+    stack = []
+    count = 0
+    for x in range(0, threadCount):
+        targetStack = []
+        for y in range(0, tokensPerThread):
+            count+=1
+            #targetStack.append(openseaApi + str(sortedTokens[count]["id"]))
+            targetStack.append({"url": openseaApi + str(sortedTokens[count]["id"]), "index": count})
+        stack.append(targetStack)
+    return stack
+
+stack = generate_stack()
+threadStack = []
+for targets in stack:
+    t = threading.Thread(target=getThread,args=([targets]))
+    threadStack.append(t)
+    t.start()
+
+tstamp = time.time()
+while True:
+    t_temp = []
+    for t in threadStack:
+        check = t.is_alive()
+        if check:
+            t_temp.append(t)
+    threadStack = t_temp
+    if not threadStack:
+        break
+    time.sleep(10)
+    print('elapsed time => ' + str(time.time() - tstamp))
+
+print('elapsed time => ' + str(time.time() - tstamp))
+print('MILESTONE: OpenSea Prices Complete')
+
 
 # Export JSON to CSV
 df = pd.json_normalize(sortedTokens)
-print('MILESTONE: Tokens CSV Created')
 df_reorder = df[columnOrder]
-df_reorder.to_csv('tokens.csv', index=False, encoding='utf-8')
-
-print('MILESTONE: Tokens CSV Sorted')
+df_reorder.to_csv('tokens.csv', index=True, encoding='utf-8')
+#print('MILESTONE: Tokens CSV Sorted')
 
 
 
 print('DONE!!!!!')
-
