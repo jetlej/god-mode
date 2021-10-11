@@ -28,5 +28,5 @@ d) **JSON object**  (readable token data, surrounded by brackets)
 1. Open `godMode.py` and switch out the `token_contract_address` and `url_stub` for your chosen NFT collection
 2. Run `python3 godMode.py`
 3. If it works, it will spit out `tokens.csv` in this folder
-4. Go to the Google Sheets template, make a duplicate
-5. Select the cell that says 'This', then go File > Import > 
+4. Go to the [Google Sheets template](https://docs.google.com/spreadsheets/d/1mjYXERwns5dLtBHYh2GT3BZ_MZFL_dXJ1Yk50AWOElc/edit?usp=sharing), and make a duplicate
+5. Select the cell that says 'this', then go File > Import > 
