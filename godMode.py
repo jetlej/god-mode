@@ -14,16 +14,16 @@ infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 ipfs = False
 base64 = 0
 useEtherscan = 0
-waitForUpdate = True
-skipScrape = False
+waitForUpdate = False
+skipScrape = True
 tokenCount = 8888
 threadCount = 50
 openSeaLimit = 500
 countBlanks = False
 
 # Mekk's
-url_stub = "https://api.themekaverse.com/meka/"
-token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+#url_stub = "https://api.themekaverse.com/meka/"
+#token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
 
 # Galactic Apes
 #url_stub = 'https://galacticapes.mypinata.cloud/ipfs/QmcX6g2xXiFP5j1iAfXREuP9EucRRpuMCAnoYaVYjtrJeK/'
@@ -42,8 +42,8 @@ token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
 #token_contract_address = '0x1a92f7381b9f03921564a437210bb9396471050c'
 
 # BAYC (IPFS)
-#url_stub = 'ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/'
-#token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
+url_stub = 'ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/'
+token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
 
 # Anonymice
 #url_stub = MUST LOOP THROUGH ETHERSCAN, THEN CONVERT FROM BASE64
@@ -196,7 +196,7 @@ dict = {}
 total = 0
 result = []
 errors = []
-columnOrder = ['id', 'score', 'score %', 'price', 'link', 'image']
+columnOrder = ['id', 'absolute score', 'score', 'score %', 'price', 'score/price', 'link', 'image']
 for file in fstack:
     with open(file, "r") as f:
         try:
@@ -267,6 +267,8 @@ print('MILESTONE: Counts CSV Created')
 
 # Get rarity score for each token
 tokens = []
+maxScore = 0
+minScore = 100000000
 for row in list(result):
     tokenObj = row
     multiplyScore = 1
@@ -279,10 +281,27 @@ for row in list(result):
             sumScore = sumScore + count
             score = count / tokenCount
             multiplyScore = multiplyScore * score
+    if sumScore > maxScore:
+        maxScore = sumScore
+    if sumScore < minScore:
+        minScore = sumScore
     tokenObj['score'] = sumScore
     tokenObj['score %'] = multiplyScore
     tokenObj['link'] = 'https://opensea.io/assets/' + token_contract_address + '/' + row['id']
     tokens.append(tokenObj)
+
+
+# Set absolute rarity score for each token (0-100)
+adjustedMax = maxScore - minScore
+i = 0
+for token in list(tokens):
+    score = token["score"]
+    absoluteScore = (score - minScore) / adjustedMax * 100
+    absoluteScore = 100 - absoluteScore
+    absoluteScore = float("{:.2f}".format(absoluteScore))
+    print(absoluteScore)
+    tokens[i]["absolute score"] = absoluteScore
+    i += 1
 
 
 # Sort them by rarity score, and get OpenSea prices for the top 200
@@ -311,6 +330,7 @@ def getThread(targetStack):
                         price = int(order["base_price"]) / 1000000000000000000
                         # print(price)
                         sortedTokens[count]["price"] = price
+                        sortedTokens[count]["score/price"] = float("{:.1f}".format(sortedTokens[count]["absolute score"] / price))
                         break
 
         except Exception as e:
