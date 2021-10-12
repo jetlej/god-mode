@@ -11,19 +11,36 @@ import shutil
 infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
 infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
-ipfs = False
-base64 = 0
-useEtherscan = 0
-waitForUpdate = False
-skipScrape = True
-tokenCount = 8888
-threadCount = 50
-openSeaLimit = 500
-countBlanks = False
+mekaverse = False
+if mekaverse == True: 
+    ipfs = False
+    base64 = 0
+    useEtherscan = 0
+    waitForUpdate = True
+    skipScrape = False
+    tokenCount = 8888
+    threadCount = 50
+    openSeaLimit = 500
+    countBlanks = False
 
-# Mekk's
-#url_stub = "https://api.themekaverse.com/meka/"
-#token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+    url_stub = "https://api.themekaverse.com/meka/"
+    token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+
+else: 
+    ipfs = False
+    base64 = 0
+    useEtherscan = 0
+    waitForUpdate = False
+    skipScrape = False
+    tokenCount = 8888
+    threadCount = 50
+    openSeaLimit = 500
+    countBlanks = False
+
+    # Lazy Lions (IPFS)
+    url_stub = 'https://www.lazylionsnft.com/api/'
+    token_contract_address = '0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0'
+
 
 # Galactic Apes
 #url_stub = 'https://galacticapes.mypinata.cloud/ipfs/QmcX6g2xXiFP5j1iAfXREuP9EucRRpuMCAnoYaVYjtrJeK/'
@@ -42,8 +59,8 @@ countBlanks = False
 #token_contract_address = '0x1a92f7381b9f03921564a437210bb9396471050c'
 
 # BAYC (IPFS)
-url_stub = 'ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/'
-token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
+#url_stub = 'ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/'
+#token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
 
 # Anonymice
 #url_stub = MUST LOOP THROUGH ETHERSCAN, THEN CONVERT FROM BASE64
