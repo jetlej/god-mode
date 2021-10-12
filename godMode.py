@@ -14,20 +14,24 @@ infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 ipfs = False
 base64 = 0
 useEtherscan = 0
-waitForUpdate = False
-skipScrape = True
-tokenCount = 10000
+waitForUpdate = True
+skipScrape = False
+tokenCount = 8888
+threadCount = 50
 openSeaLimit = 500
-
-url_stub = 'ipfs://QmUBZpfqwzZxw9pQB6RykMpetW2X5xxVhSHm1TyYCZmGV2/'
-token_contract_address = '0xbea8123277142de42571f1fac045225a1d347977'
-
-#url_stub = 'https://raw.githubusercontent.com/TheHumanoids/metadata/main/'
-#token_contract_address = '0x3a5051566b2241285be871f650c445a88a970edd'
+countBlanks = False
 
 # Mekk's
-#url_stub = "https://api.themekaverse.com/meka/"
-#token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+url_stub = "https://api.themekaverse.com/meka/"
+token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+
+# Galactic Apes
+#url_stub = 'https://galacticapes.mypinata.cloud/ipfs/QmcX6g2xXiFP5j1iAfXREuP9EucRRpuMCAnoYaVYjtrJeK/'
+#token_contract_address = '0x12d2d1bed91c24f878f37e66bd829ce7197e4d14'
+
+# DystoPunks V2
+#url_stub = 'ipfs://QmUBZpfqwzZxw9pQB6RykMpetW2X5xxVhSHm1TyYCZmGV2/'
+#token_contract_address = '0xbea8123277142de42571f1fac045225a1d347977'
 
 # GEVOLS
 #url_stub = "https://api.gevols.com/token/"
@@ -68,6 +72,8 @@ if 'ipfs://' in url_stub:
 if skipScrape == False:
     if os.path.isfile("tokens.csv"):
         os.remove("tokens.csv")
+    if os.path.isfile("counts.csv"):
+        os.remove("counts.csv")
     try:
         shutil.rmtree('errors/')
     except OSError as e:
@@ -94,7 +100,9 @@ if waitForUpdate:
       time.sleep(10)
       try:
         r = requests.get(url_stub + '1?v=' + str(cache), timeout=10)
-        newValue = r.text
+        #print(r.text)
+        if not '502 Bad Gateway' in r.text:
+            newValue = r.text
       except Exception as e:
         print(e)
 
@@ -105,8 +113,8 @@ if waitForUpdate:
 
 
 if skipScrape == False:
-    threadCount = 50
     tokensPerThread = math.ceil(tokenCount / threadCount)
+    errorIds = []
 
     def makeFolders():
         try:
@@ -187,6 +195,7 @@ fstack = [folder + fname for fname in os.listdir(folder)]
 dict = {}
 total = 0
 result = []
+errors = []
 columnOrder = ['id', 'score', 'score %', 'price', 'link', 'image']
 for file in fstack:
     with open(file, "r") as f:
@@ -206,7 +215,7 @@ for file in fstack:
                 #print(trait)
                 if not str(trait["trait_type"]) in columnOrder:
                     columnOrder.append(str(trait["trait_type"]))
-                    columnOrder.append(str(trait["trait_type"]) + ' #')
+                    columnOrder.append(str(trait["trait_type"]) + ' ##')
                 label = trait["trait_type"]
                 obj[label] = trait["value"]
             #print(obj)
@@ -214,12 +223,30 @@ for file in fstack:
         except Exception as e:
             print('Skipped ' + f.name)
             print(e)
+            errors.append(f.name)
+
+
+#print(errors)
+
+
+# Add in 'Blank' values
+if countBlanks == True:
+    print('Count blanks')
+    i = 0
+    for row in result:
+        for c in columnOrder:
+            if not c in ['id', 'score', 'score %', 'price', 'link', 'image']:
+                if not '##' in c:
+                    if not c in row:
+                        result[i][c] = 'BLANK'
+        i += 1
+
 
 # Count the total traits
 counts = {}
 for row in result:
     for attr, value in row.items():
-        if attr != 'id':
+        if not attr in ['id', 'image', 'price']:
             if not attr in counts:
                 counts[attr] = {}
             if not value in counts[attr]:
@@ -227,12 +254,15 @@ for row in result:
             else:
                 counts[attr][value] = counts[attr][value] + 1
 
-#print('--------')
-#print(counts)
+countsFlat = []
+for label, attributes in counts.items():
+    for attr, value in attributes.items():
+        countsFlat.append({"attribute": label + ' - ' + attr, "count": value})
 
-#cf = pd.json_normalize(counts)
-#cf.to_csv('counts.csv', index=False, encoding='utf-8')
-#print('MILESTONE: Counts CSV Created')
+sortedCounts = sorted(countsFlat, key=lambda x: x["count"])
+cf = pd.json_normalize(sortedCounts)
+cf.to_csv('counts.csv', index=False, encoding='utf-8')
+print('MILESTONE: Counts CSV Created')
 
 
 # Get rarity score for each token
@@ -242,10 +272,10 @@ for row in list(result):
     multiplyScore = 1
     sumScore = 0 
     for attr, value in list(row.items()):    
-        if attr != 'id':
+         if not attr in ['id', 'image', 'price']:
             count = counts[attr][value]
             #tokenObj[attr] = str(value) + ' - ' + str(count)
-            tokenObj[str(attr) + ' #'] = count
+            tokenObj[str(attr) + ' ##'] = count
             sumScore = sumScore + count
             score = count / tokenCount
             multiplyScore = multiplyScore * score
@@ -254,9 +284,6 @@ for row in list(result):
     tokenObj['link'] = 'https://opensea.io/assets/' + token_contract_address + '/' + row['id']
     tokens.append(tokenObj)
 
-#print('--------')
-#print(tokens)
-
 
 # Sort them by rarity score, and get OpenSea prices for the top 200
 sortedTokens = sorted(tokens, key=lambda x: x["score"])
@@ -264,6 +291,7 @@ sortedTokens = sorted(tokens, key=lambda x: x["score"])
 openseaApi = 'https://api.opensea.io/api/v1/asset/' + token_contract_address + '/'
 threadCount = 50
 tokensPerThread = math.ceil(openSeaLimit / threadCount)
+openseaErrors = []
 
 def getThread(targetStack):
     for link in targetStack:
@@ -276,16 +304,19 @@ def getThread(targetStack):
             r = requests.get(url, timeout=10)
             data = r.text
             data = json.loads(data)
-            owner = data["owner"]["address"]
-            for order in data["orders"]:
-                if order["maker"]["address"] == owner:
-                    price = int(order["base_price"]) / 1000000000000000000
-                    print(price)
-                    sortedTokens[count]["price"] = price
-                    break
+            if "owner" in data:
+                owner = data["owner"]["address"]
+                for order in data["orders"]:
+                    if order["maker"]["address"] == owner:
+                        price = int(order["base_price"]) / 1000000000000000000
+                        # print(price)
+                        sortedTokens[count]["price"] = price
+                        break
 
         except Exception as e:
             print('OpenSea scrape error: ' + str(e))
+            #openseaErrors.append(url)
+
 
 def generate_stack():
     #Create 10 list/arrays of 1000 urls (contained in a list/array) to feed into threads
