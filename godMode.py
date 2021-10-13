@@ -1,5 +1,6 @@
 import requests
-import time
+import time 
+import datetime
 import threading
 import os
 import math
@@ -11,17 +12,18 @@ import shutil
 infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
 infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
-mekaverse = False
+mekaverse = True
 if mekaverse == True: 
     ipfs = False
     base64 = 0
     useEtherscan = 0
-    waitForUpdate = True
-    skipScrape = False
+    waitForUpdate = False
+    skipScrape = True
     tokenCount = 8888
     threadCount = 50
     openSeaLimit = 500
     countBlanks = False
+    keywords = ["Rare", "Lego", "lego", "rare", "Legendary", "legendary", "Special", "special"]
 
     url_stub = "https://api.themekaverse.com/meka/"
     token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
@@ -36,6 +38,7 @@ else:
     threadCount = 50
     openSeaLimit = 500
     countBlanks = False
+    keywords = ["Rare", "Lego", "lego", "rare", "Legendary", "legendary", "Special", "special"]
 
     # Lazy Lions (IPFS)
     url_stub = 'https://www.lazylionsnft.com/api/'
@@ -125,6 +128,7 @@ if waitForUpdate:
 
   print('--------------')
   print('MILESTONE: TokenURI Updated!')
+  print(datetime.datetime.now())
   print(newValue)
   os.system("afplay alert.wav") 
 
@@ -235,6 +239,8 @@ for file in fstack:
                     columnOrder.append(str(trait["trait_type"]) + ' ##')
                 label = trait["trait_type"]
                 obj[label] = trait["value"]
+                if trait["value"] in keywords:
+                    print('https://opensea.io/assets/0x9a534628b4062e123ce7ee2222ec20b86e16ca8f/' + tokenId.stem)
             #print(obj)
             result.append(obj)
         except Exception as e:
@@ -316,7 +322,6 @@ for token in list(tokens):
     absoluteScore = (score - minScore) / adjustedMax * 100
     absoluteScore = 100 - absoluteScore
     absoluteScore = float("{:.2f}".format(absoluteScore))
-    print(absoluteScore)
     tokens[i]["absolute score"] = absoluteScore
     i += 1
 
