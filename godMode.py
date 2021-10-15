@@ -12,7 +12,7 @@ import shutil
 infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
 infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
-test = True;
+test = False;
 
 if test == False: 
     useEtherscan = 0
@@ -34,14 +34,14 @@ else:
 
 
 rankByMultiply = True
-url_stub = "https://api.themekaverse.com/meka/"
-url_suffix = ''
-token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+#url_stub = "https://api.themekaverse.com/meka/"
+#url_suffix = ''
+#token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
 
 # Metasaurs
-#url_stub = "https://api.metasaurs.com/metadata/"
-#url_suffix = '.json'
-#token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
+url_stub = "https://api.metasaurs.com/metadata/"
+url_suffix = '.json'
+token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
 
 keywords = ["Rare", "rare", "Legendary", "legendary", "Special", "special"]
 ipfs = False
@@ -219,7 +219,7 @@ dict = {}
 total = 0
 result = []
 errors = []
-columnOrder = ['id', 'combined score', 'absolute score', 'score', 'absolute % score', 'score %', 'price', 'score/price', 'link', 'image']
+columnOrder = ['id', 'score', 'price', 'score/price', 'link', 'image']
 for file in fstack:
     with open(file, "r") as f:
         try:
@@ -258,7 +258,6 @@ for file in fstack:
 
 # Add in 'Blank' values
 if countBlanks == True:
-    print('Count blanks')
     i = 0
     for row in result:
         for c in columnOrder:
@@ -296,68 +295,37 @@ print('MILESTONE: Counts CSV Created')
 tokens = []
 maxScore = 0
 minScore = 100000000
-maxMultiplyScore = 0
-minMultiplyScore = 100000000
 for row in list(result):
     tokenObj = row
-    multiplyScore = 1
-    sumScore = 0 
+    score = 0 
     for attr, value in list(row.items()):    
          if not attr in ['id', 'image', 'price', 'score/price']:
             count = counts[attr][value]
             #tokenObj[attr] = str(value) + ' - ' + str(count)
             tokenObj[str(attr) + ' ##'] = count
-            sumScore = sumScore + count
-            score = count / tokenCount
-            multiplyScore = multiplyScore * score
-    if sumScore > maxScore:
-        maxScore = sumScore
-    if sumScore < minScore:
-        minScore = sumScore
+            traitRarity = count / tokenCount
+            score = score + (1 / traitRarity)
+            
+            if score > maxScore:
+                maxScore = score
+            if score < minScore:
+                minScore = score
 
-    if multiplyScore > maxMultiplyScore:
-        maxMultiplyScore = multiplyScore
-    if multiplyScore < minMultiplyScore:
-        minMultiplyScore = multiplyScore
-    tokenObj['score'] = sumScore
-    tokenObj['score %'] = multiplyScore
+    tokenObj['score'] = score
     tokenObj['link'] = 'https://opensea.io/assets/' + token_contract_address + '/' + row['id']
     tokens.append(tokenObj)
 
-
-print("Min: " + str(minMultiplyScore))
-print("Max: " + str(maxMultiplyScore))
-
-# Set absolute rarity score for each token (0-100)
-adjustedMax = maxScore - minScore
-adjustedMultiplyMax = maxMultiplyScore - minMultiplyScore
-
-print("Adjusted Max: " + str(adjustedMultiplyMax))
-
 i = 0
 for token in list(tokens):
-    multiplyScore = token["score %"]
-    absoluteMultiply = multiplyScore/ adjustedMultiplyMax * 100
-    absoluteMultiplyScore = 100 - absoluteMultiply
-    absoluteMultiplyScore = float("{:.2f}".format(absoluteMultiplyScore))
-    tokens[i]["absolute % score"] = absoluteMultiplyScore
-
-    if i == 0:
-        print('Multiply Score: ' + str(multiplyScore))
-        print('Absolute Multiply Score: ' + str(absoluteMultiplyScore))
-
     score = token["score"]
-    absoluteScore = score / adjustedMax * 100
-    absoluteScore = 100 - absoluteScore
+    absoluteScore = score / (maxScore - minScore) * 100
     absoluteScore = float("{:.2f}".format(absoluteScore))
-    tokens[i]["absolute score"] = absoluteScore
-
-    tokens[i]["combined score"] = absoluteScore + absoluteMultiplyScore
+    tokens[i]["score"] = absoluteScore
     i += 1
 
 
 # Sort them by rarity score, and get OpenSea prices for the top 200
-sortedTokens = sorted(tokens, key=lambda x: x["score"])
+sortedTokens = sorted(tokens, key=lambda x: x["score"], reverse=True)
 
 openseaApi = 'https://api.opensea.io/api/v1/asset/' + token_contract_address + '/'
 threadCount = 50
@@ -382,7 +350,7 @@ def getThread(targetStack):
                         price = int(order["base_price"]) / 1000000000000000000
                         # print(price)
                         sortedTokens[count]["price"] = price
-                        sortedTokens[count]["score/price"] = float("{:.1f}".format(sortedTokens[count]["absolute score"] / price))
+                        sortedTokens[count]["score/price"] = float("{:.1f}".format(sortedTokens[count]["score"] / price))
                         break
 
         except Exception as e:
