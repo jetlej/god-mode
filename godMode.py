@@ -12,37 +12,39 @@ import shutil
 infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
 infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
-mekaverse = True
-if mekaverse == True: 
-    ipfs = False
-    base64 = 0
-    useEtherscan = 0
-    waitForUpdate = False
-    skipScrape = True
-    tokenCount = 8888
-    threadCount = 50
-    openSeaLimit = 500
-    countBlanks = False
-    keywords = ["Rare", "Lego", "lego", "rare", "Legendary", "legendary", "Special", "special"]
+test = True;
 
-    url_stub = "https://api.themekaverse.com/meka/"
-    token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
-
-else: 
-    ipfs = False
-    base64 = 0
+if test == False: 
     useEtherscan = 0
-    waitForUpdate = False
+    waitForUpdate = True
     skipScrape = False
     tokenCount = 8888
     threadCount = 50
     openSeaLimit = 500
     countBlanks = False
-    keywords = ["Rare", "Lego", "lego", "rare", "Legendary", "legendary", "Special", "special"]
 
-    # Lazy Lions (IPFS)
-    url_stub = 'https://www.lazylionsnft.com/api/'
-    token_contract_address = '0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0'
+else: 
+    useEtherscan = 0
+    waitForUpdate = False
+    skipScrape = True
+    tokenCount = 8888
+    threadCount = 50
+    openSeaLimit = 10
+    countBlanks = True
+
+
+rankByMultiply = True
+url_stub = "https://api.themekaverse.com/meka/"
+url_suffix = ''
+token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+
+# Metasaurs
+#url_stub = "https://api.metasaurs.com/metadata/"
+#url_suffix = '.json'
+#token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
+
+keywords = ["Rare", "rare", "Legendary", "legendary", "Special", "special"]
+ipfs = False
 
 
 # Galactic Apes
@@ -107,7 +109,7 @@ if skipScrape == False:
 
 
 if waitForUpdate:
-  r = requests.get(url_stub + '1?v=1', timeout=10)
+  r = requests.get(url_stub + '1' + url_suffix, timeout=10)
   initValue = r.text
   print(initValue)
   newValue = initValue
@@ -119,9 +121,9 @@ if waitForUpdate:
       print("Not yet")
       time.sleep(10)
       try:
-        r = requests.get(url_stub + '1?v=' + str(cache), timeout=10)
+        r = requests.get(url_stub + '1' + url_suffix + '?v=' + str(cache), timeout=10)
         #print(r.text)
-        if not '502 Bad Gateway' in r.text:
+        if not 'Error' in r.text:
             newValue = r.text
       except Exception as e:
         print(e)
@@ -176,7 +178,7 @@ if skipScrape == False:
             targetStack = []
             for y in range(0, tokensPerThread):
                 county+=1
-                targetStack.append(url_stub + str(county))
+                targetStack.append(url_stub + str(county) + url_suffix)
             stack.append(targetStack)
         return stack
 
@@ -217,12 +219,13 @@ dict = {}
 total = 0
 result = []
 errors = []
-columnOrder = ['id', 'absolute score', 'score', 'score %', 'price', 'score/price', 'link', 'image']
+columnOrder = ['id', 'combined score', 'absolute score', 'score', 'absolute % score', 'score %', 'price', 'score/price', 'link', 'image']
 for file in fstack:
     with open(file, "r") as f:
         try:
             data = json.load(f)
             tokenId = Path(f.name)
+            image = ''
             if "image" in data:
                 image = data["image"]
             else:
@@ -231,21 +234,22 @@ for file in fstack:
                 split = image.split('://')
                 image = 'https://ipfs.infura.io:5001/api/v0/cat?arg=' + split[1]
 
-            obj = {"id": tokenId.stem, "image": image, "price": ''}
-            for trait in data["attributes"]:
-                #print(trait)
-                if not str(trait["trait_type"]) in columnOrder:
-                    columnOrder.append(str(trait["trait_type"]))
-                    columnOrder.append(str(trait["trait_type"]) + ' ##')
-                label = trait["trait_type"]
-                obj[label] = trait["value"]
-                if trait["value"] in keywords:
-                    print('https://opensea.io/assets/0x9a534628b4062e123ce7ee2222ec20b86e16ca8f/' + tokenId.stem)
-            #print(obj)
+            obj = {"id": tokenId.stem, "image": image, "price": '', "score/price": ''}
+            if "attributes" in data:
+                for trait in data["attributes"]:
+                    #print(trait)
+                    if not str(trait["trait_type"]) in columnOrder:
+                        columnOrder.append(str(trait["trait_type"]))
+                        columnOrder.append(str(trait["trait_type"]) + ' ##')
+                    label = trait["trait_type"]
+                    obj[label] = trait["value"]
+                    if trait["value"] in keywords:
+                        print('https://opensea.io/assets/0x9a534628b4062e123ce7ee2222ec20b86e16ca8f/' + tokenId.stem)
+                #print(obj)
             result.append(obj)
         except Exception as e:
-            print('Skipped ' + f.name)
-            print(e)
+            #print('Skipped ' + f.name)
+            #print(e)
             errors.append(f.name)
 
 
@@ -258,7 +262,7 @@ if countBlanks == True:
     i = 0
     for row in result:
         for c in columnOrder:
-            if not c in ['id', 'score', 'score %', 'price', 'link', 'image']:
+            if not c in ['id', 'score', 'score %', 'price', 'score/price', 'link', 'image']:
                 if not '##' in c:
                     if not c in row:
                         result[i][c] = 'BLANK'
@@ -269,7 +273,7 @@ if countBlanks == True:
 counts = {}
 for row in result:
     for attr, value in row.items():
-        if not attr in ['id', 'image', 'price']:
+        if not attr in ['id', 'image', 'price', 'score/price']:
             if not attr in counts:
                 counts[attr] = {}
             if not value in counts[attr]:
@@ -280,7 +284,7 @@ for row in result:
 countsFlat = []
 for label, attributes in counts.items():
     for attr, value in attributes.items():
-        countsFlat.append({"attribute": label + ' - ' + attr, "count": value})
+        countsFlat.append({"attribute": str(label) + ' - ' + str(attr), "count": value})
 
 sortedCounts = sorted(countsFlat, key=lambda x: x["count"])
 cf = pd.json_normalize(sortedCounts)
@@ -292,12 +296,14 @@ print('MILESTONE: Counts CSV Created')
 tokens = []
 maxScore = 0
 minScore = 100000000
+maxMultiplyScore = 0
+minMultiplyScore = 100000000
 for row in list(result):
     tokenObj = row
     multiplyScore = 1
     sumScore = 0 
     for attr, value in list(row.items()):    
-         if not attr in ['id', 'image', 'price']:
+         if not attr in ['id', 'image', 'price', 'score/price']:
             count = counts[attr][value]
             #tokenObj[attr] = str(value) + ' - ' + str(count)
             tokenObj[str(attr) + ' ##'] = count
@@ -308,21 +314,45 @@ for row in list(result):
         maxScore = sumScore
     if sumScore < minScore:
         minScore = sumScore
+
+    if multiplyScore > maxMultiplyScore:
+        maxMultiplyScore = multiplyScore
+    if multiplyScore < minMultiplyScore:
+        minMultiplyScore = multiplyScore
     tokenObj['score'] = sumScore
     tokenObj['score %'] = multiplyScore
     tokenObj['link'] = 'https://opensea.io/assets/' + token_contract_address + '/' + row['id']
     tokens.append(tokenObj)
 
 
+print("Min: " + str(minMultiplyScore))
+print("Max: " + str(maxMultiplyScore))
+
 # Set absolute rarity score for each token (0-100)
 adjustedMax = maxScore - minScore
+adjustedMultiplyMax = maxMultiplyScore - minMultiplyScore
+
+print("Adjusted Max: " + str(adjustedMultiplyMax))
+
 i = 0
 for token in list(tokens):
+    multiplyScore = token["score %"]
+    absoluteMultiply = multiplyScore/ adjustedMultiplyMax * 100
+    absoluteMultiplyScore = 100 - absoluteMultiply
+    absoluteMultiplyScore = float("{:.2f}".format(absoluteMultiplyScore))
+    tokens[i]["absolute % score"] = absoluteMultiplyScore
+
+    if i == 0:
+        print('Multiply Score: ' + str(multiplyScore))
+        print('Absolute Multiply Score: ' + str(absoluteMultiplyScore))
+
     score = token["score"]
-    absoluteScore = (score - minScore) / adjustedMax * 100
+    absoluteScore = score / adjustedMax * 100
     absoluteScore = 100 - absoluteScore
     absoluteScore = float("{:.2f}".format(absoluteScore))
     tokens[i]["absolute score"] = absoluteScore
+
+    tokens[i]["combined score"] = absoluteScore + absoluteMultiplyScore
     i += 1
 
 
