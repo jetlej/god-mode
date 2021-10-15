@@ -34,14 +34,14 @@ keywords = ["Rare", "rare", "Legendary", "legendary", "Special", "special"]
 ipfs = False
 url_suffix = ''
 
-# Metasaurs
-url_stub = "https://api.metasaurs.com/metadata/"
-url_suffix = '.json'
-token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
+collection = 'junglefreaks'
+url_stub = 'https://gateway.pinata.cloud/ipfs/QmbLN428fqXS97u7mvwdh2vVsCzCBWqdJuczJZjBjY1RRF/0000'
+token_contract_address = '0x7e6bc952d4b4bd814853301bee48e99891424de0'
 
-#collection = 'junglefreaks'
-#url_stub = 'https://gateway.pinata.cloud/ipfs/QmbLN428fqXS97u7mvwdh2vVsCzCBWqdJuczJZjBjY1RRF/0000'
-#token_contract_address = '0x7e6bc952d4b4bd814853301bee48e99891424de0'
+# Metasaurs
+#url_stub = "https://api.metasaurs.com/metadata/"
+#url_suffix = '.json'
+#token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
 
 # Galactic Apes
 #url_stub = 'https://galacticapes.mypinata.cloud/ipfs/QmcX6g2xXiFP5j1iAfXREuP9EucRRpuMCAnoYaVYjtrJeK/'
@@ -94,16 +94,16 @@ if 'ipfs://' in url_stub:
 #quit()
 
 if skipScrape == False:
-    if os.path.isfile("/exports/" + collection + "/tokens.csv"):
-        os.remove("/exports/" + collection + "/tokens.csv")
-    if os.path.isfile("/exports/" + collection + "/counts.csv"):
-        os.remove("/exports/" + collection + "/counts.csv")
+    if os.path.isfile("exports/" + collection + "/tokens.csv"):
+        os.remove("exports/" + collection + "/tokens.csv")
+    if os.path.isfile("exports/" + collection + "/counts.csv"):
+        os.remove("exports/" + collection + "/counts.csv")
     try:
-        shutil.rmtree("/exports/" + collection + "/errors/")
+        shutil.rmtree("exports/" + collection + "/errors/")
     except OSError as e:
         print(e.strerror)
     try:
-        shutil.rmtree("/exports/" + collection + "/loot/")
+        shutil.rmtree("exports/" + collection + "/loot/")
     except OSError as e:
         print(e.strerror)
 
@@ -163,34 +163,34 @@ if skipScrape == False:
             pass
 
     def getThread(targetStack):
-        for url in targetStack:
-            # print 'this is url => ',url
-            fname = str(url.split("/").pop())
+        for item in targetStack:
+            url = item["url"]
+            tokenId = item["id"]
             try:
                 if (ipfs):
                     params = (('arg', url),)
                     r = requests.post('https://ipfs.infura.io:5001/api/v0/cat', params=params, auth=(infuraIpfsId,infuraIpfsSecret))
                 else: 
                     r = requests.get(url,timeout=10)
-                with open("exports/" + collection + "/loot/" + fname +".json","w" ) as f:
+                with open("exports/" + collection + "/loot/" + tokenId +".json","w" ) as f:
                     f.write(r.text)
                     f.flush()
 
             except Exception as e:
                 #print e
-                with open("exports/" + collection + "/errors/" + fname + ".txt","w") as f:
-                    f.write("Error for this => " + fname + "\n")
+                with open("exports/" + collection + "/errors/" + tokenId + ".txt","w") as f:
+                    f.write("Error for this => " + tokenId + "\n")
                     f.write(str(e))
 
     def generate_stack(url_stub):
         #Create 10 list/arrays of 1000 urls (contained in a list/array) to feed into threads
         stack = []
-        county = 0
+        count = 0
         for x in range(0, threadCount):
             targetStack = []
             for y in range(0, tokensPerThread):
-                county+=1
-                targetStack.append(url_stub + str(county) + url_suffix)
+                count+=1
+                targetStack.append({"url": url_stub + str(count) + url_suffix, "id": str(count)})
             stack.append(targetStack)
         return stack
 
@@ -330,7 +330,7 @@ for row in list(result):
 i = 0
 for token in list(tokens):
     score = token["score"]
-    absoluteScore = score / (maxScore - minScore) * 100
+    absoluteScore = score / (maxScore - minScore + 0.0000000001) * 100
     absoluteScore = float("{:.2f}".format(absoluteScore))
     tokens[i]["score"] = absoluteScore
     i += 1
