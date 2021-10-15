@@ -12,42 +12,45 @@ import shutil
 infuraIpfsSecret = '75bfdb23290093c4c4132437ddd0053b'
 infuraIpfsId = '1zG2q22hA21WrgpRrW2lBXe6FXC'
 
-mekaverse = True
-if mekaverse == True: 
-    ipfs = False
-    base64 = 0
-    useEtherscan = 0
-    waitForUpdate = False
-    skipScrape = True
-    tokenCount = 8888
-    threadCount = 50
-    openSeaLimit = 500
-    countBlanks = False
-    keywords = ["Rare", "Lego", "lego", "rare", "Legendary", "legendary", "Special", "special"]
+test = True;
 
-    url_stub = "https://api.themekaverse.com/meka/"
-    token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
-
-else: 
-    ipfs = False
-    base64 = 0
-    useEtherscan = 0
-    waitForUpdate = False
+if test == False: 
+    waitForUpdate = True
     skipScrape = False
     tokenCount = 8888
     threadCount = 50
     openSeaLimit = 500
     countBlanks = False
-    keywords = ["Rare", "Lego", "lego", "rare", "Legendary", "legendary", "Special", "special"]
 
-    # Lazy Lions (IPFS)
-    url_stub = 'https://www.lazylionsnft.com/api/'
-    token_contract_address = '0x8943c7bac1914c9a7aba750bf2b6b09fd21037e0'
+else: 
+    waitForUpdate = False
+    skipScrape = False
+    tokenCount = 10000
+    threadCount = 50
+    openSeaLimit = 1
+    countBlanks = True
 
+keywords = ["Rare", "rare", "Legendary", "legendary", "Special", "special"]
+ipfs = False
+url_suffix = ''
+
+collection = 'junglefreaks'
+url_stub = 'https://gateway.pinata.cloud/ipfs/QmbLN428fqXS97u7mvwdh2vVsCzCBWqdJuczJZjBjY1RRF/0000'
+token_contract_address = '0x7e6bc952d4b4bd814853301bee48e99891424de0'
+
+# Metasaurs
+#url_stub = "https://api.metasaurs.com/metadata/"
+#url_suffix = '.json'
+#token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
 
 # Galactic Apes
 #url_stub = 'https://galacticapes.mypinata.cloud/ipfs/QmcX6g2xXiFP5j1iAfXREuP9EucRRpuMCAnoYaVYjtrJeK/'
 #token_contract_address = '0x12d2d1bed91c24f878f37e66bd829ce7197e4d14'
+
+# Mekaverse
+#url_stub = "https://api.themekaverse.com/meka/"
+#url_suffix = ''
+#token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
 
 # DystoPunks V2
 #url_stub = 'ipfs://QmUBZpfqwzZxw9pQB6RykMpetW2X5xxVhSHm1TyYCZmGV2/'
@@ -62,6 +65,7 @@ else:
 #token_contract_address = '0x1a92f7381b9f03921564a437210bb9396471050c'
 
 # BAYC (IPFS)
+#collection = 'bayc'
 #url_stub = 'ipfs://QmeSjSinHpPnmXmspMjwiXyN6zS4E9zccariGR3jxcaWtq/'
 #token_contract_address = '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d'
 
@@ -90,16 +94,16 @@ if 'ipfs://' in url_stub:
 #quit()
 
 if skipScrape == False:
-    if os.path.isfile("tokens.csv"):
-        os.remove("tokens.csv")
-    if os.path.isfile("counts.csv"):
-        os.remove("counts.csv")
+    if os.path.isfile("/exports/" + collection + "/tokens.csv"):
+        os.remove("/exports/" + collection + "/tokens.csv")
+    if os.path.isfile("/exports/" + collection + "/counts.csv"):
+        os.remove("/exports/" + collection + "/counts.csv")
     try:
-        shutil.rmtree('errors/')
+        shutil.rmtree("/exports/" + collection + "/errors/")
     except OSError as e:
         print(e.strerror)
     try:
-        shutil.rmtree('loot/')
+        shutil.rmtree("/exports/" + collection + "/loot/")
     except OSError as e:
         print(e.strerror)
 
@@ -107,7 +111,7 @@ if skipScrape == False:
 
 
 if waitForUpdate:
-  r = requests.get(url_stub + '1?v=1', timeout=10)
+  r = requests.get(url_stub + '1' + url_suffix, timeout=10)
   initValue = r.text
   print(initValue)
   newValue = initValue
@@ -119,9 +123,9 @@ if waitForUpdate:
       print("Not yet")
       time.sleep(10)
       try:
-        r = requests.get(url_stub + '1?v=' + str(cache), timeout=10)
+        r = requests.get(url_stub + '1' + url_suffix + '?v=' + str(cache), timeout=10)
         #print(r.text)
-        if not '502 Bad Gateway' in r.text:
+        if not 'Error' in r.text:
             newValue = r.text
       except Exception as e:
         print(e)
@@ -139,12 +143,22 @@ if skipScrape == False:
 
     def makeFolders():
         try:
-            os.mkdir("loot")
+            os.mkdir("exports")
         except:
             pass
 
         try:
-            os.mkdir("errors")
+            os.mkdir("exports/" + collection)
+        except:
+            pass
+
+        try:
+            os.mkdir("exports/" + collection + "/loot")
+        except:
+            pass
+
+        try:
+            os.mkdir("exports/" + collection + "/errors")
         except:
             pass
 
@@ -158,13 +172,13 @@ if skipScrape == False:
                     r = requests.post('https://ipfs.infura.io:5001/api/v0/cat', params=params, auth=(infuraIpfsId,infuraIpfsSecret))
                 else: 
                     r = requests.get(url,timeout=10)
-                with open("loot/" + fname +".json","w" ) as f:
+                with open("exports/" + collection + "/loot/" + fname +".json","w" ) as f:
                     f.write(r.text)
                     f.flush()
 
             except Exception as e:
                 #print e
-                with open("errors/" + fname + ".txt","w") as f:
+                with open("exports/" + collection + "/errors/" + fname + ".txt","w") as f:
                     f.write("Error for this => " + fname + "\n")
                     f.write(str(e))
 
@@ -176,7 +190,7 @@ if skipScrape == False:
             targetStack = []
             for y in range(0, tokensPerThread):
                 county+=1
-                targetStack.append(url_stub + str(county))
+                targetStack.append(url_stub + str(county) + url_suffix)
             stack.append(targetStack)
         return stack
 
@@ -211,18 +225,19 @@ if skipScrape == False:
 
 # Get all the individual tokenURI's and merge them into one JSON object
 
-folder = "loot/"
+folder = "exports/" + collection + "/loot/"
 fstack = [folder + fname for fname in os.listdir(folder)]
 dict = {}
 total = 0
 result = []
 errors = []
-columnOrder = ['id', 'absolute score', 'score', 'score %', 'price', 'score/price', 'link', 'image']
+columnOrder = ['id', 'score', 'price', 'score/price', 'link', 'image']
 for file in fstack:
     with open(file, "r") as f:
         try:
             data = json.load(f)
             tokenId = Path(f.name)
+            image = ''
             if "image" in data:
                 image = data["image"]
             else:
@@ -231,21 +246,22 @@ for file in fstack:
                 split = image.split('://')
                 image = 'https://ipfs.infura.io:5001/api/v0/cat?arg=' + split[1]
 
-            obj = {"id": tokenId.stem, "image": image, "price": ''}
-            for trait in data["attributes"]:
-                #print(trait)
-                if not str(trait["trait_type"]) in columnOrder:
-                    columnOrder.append(str(trait["trait_type"]))
-                    columnOrder.append(str(trait["trait_type"]) + ' ##')
-                label = trait["trait_type"]
-                obj[label] = trait["value"]
-                if trait["value"] in keywords:
-                    print('https://opensea.io/assets/0x9a534628b4062e123ce7ee2222ec20b86e16ca8f/' + tokenId.stem)
-            #print(obj)
+            obj = {"id": tokenId.stem, "image": image, "price": '', "score/price": ''}
+            if "attributes" in data:
+                for trait in data["attributes"]:
+                    #print(trait)
+                    if not str(trait["trait_type"]) in columnOrder:
+                        columnOrder.append(str(trait["trait_type"]))
+                        columnOrder.append(str(trait["trait_type"]) + ' ##')
+                    label = trait["trait_type"]
+                    obj[label] = trait["value"]
+                    if trait["value"] in keywords:
+                        print('https://opensea.io/assets/0x9a534628b4062e123ce7ee2222ec20b86e16ca8f/' + tokenId.stem)
+                #print(obj)
             result.append(obj)
         except Exception as e:
-            print('Skipped ' + f.name)
-            print(e)
+            #print('Skipped ' + f.name)
+            #print(e)
             errors.append(f.name)
 
 
@@ -254,11 +270,10 @@ for file in fstack:
 
 # Add in 'Blank' values
 if countBlanks == True:
-    print('Count blanks')
     i = 0
     for row in result:
         for c in columnOrder:
-            if not c in ['id', 'score', 'score %', 'price', 'link', 'image']:
+            if not c in ['id', 'score', 'score %', 'price', 'score/price', 'link', 'image']:
                 if not '##' in c:
                     if not c in row:
                         result[i][c] = 'BLANK'
@@ -269,7 +284,7 @@ if countBlanks == True:
 counts = {}
 for row in result:
     for attr, value in row.items():
-        if not attr in ['id', 'image', 'price']:
+        if not attr in ['id', 'image', 'price', 'score/price']:
             if not attr in counts:
                 counts[attr] = {}
             if not value in counts[attr]:
@@ -280,11 +295,11 @@ for row in result:
 countsFlat = []
 for label, attributes in counts.items():
     for attr, value in attributes.items():
-        countsFlat.append({"attribute": label + ' - ' + attr, "count": value})
+        countsFlat.append({"attribute": str(label) + ' - ' + str(attr), "count": value})
 
 sortedCounts = sorted(countsFlat, key=lambda x: x["count"])
 cf = pd.json_normalize(sortedCounts)
-cf.to_csv('counts.csv', index=False, encoding='utf-8')
+cf.to_csv("exports/" + collection + "/counts.csv", index=False, encoding='utf-8')
 print('MILESTONE: Counts CSV Created')
 
 
@@ -294,40 +309,35 @@ maxScore = 0
 minScore = 100000000
 for row in list(result):
     tokenObj = row
-    multiplyScore = 1
-    sumScore = 0 
+    score = 0 
     for attr, value in list(row.items()):    
-         if not attr in ['id', 'image', 'price']:
+         if not attr in ['id', 'image', 'price', 'score/price']:
             count = counts[attr][value]
             #tokenObj[attr] = str(value) + ' - ' + str(count)
             tokenObj[str(attr) + ' ##'] = count
-            sumScore = sumScore + count
-            score = count / tokenCount
-            multiplyScore = multiplyScore * score
-    if sumScore > maxScore:
-        maxScore = sumScore
-    if sumScore < minScore:
-        minScore = sumScore
-    tokenObj['score'] = sumScore
-    tokenObj['score %'] = multiplyScore
+            traitRarity = count / tokenCount
+            score = score + (1 / traitRarity)
+            
+            if score > maxScore:
+                maxScore = score
+            if score < minScore:
+                minScore = score
+
+    tokenObj['score'] = score
     tokenObj['link'] = 'https://opensea.io/assets/' + token_contract_address + '/' + row['id']
     tokens.append(tokenObj)
 
-
-# Set absolute rarity score for each token (0-100)
-adjustedMax = maxScore - minScore
 i = 0
 for token in list(tokens):
     score = token["score"]
-    absoluteScore = (score - minScore) / adjustedMax * 100
-    absoluteScore = 100 - absoluteScore
+    absoluteScore = score / (maxScore - minScore) * 100
     absoluteScore = float("{:.2f}".format(absoluteScore))
-    tokens[i]["absolute score"] = absoluteScore
+    tokens[i]["score"] = absoluteScore
     i += 1
 
 
 # Sort them by rarity score, and get OpenSea prices for the top 200
-sortedTokens = sorted(tokens, key=lambda x: x["score"])
+sortedTokens = sorted(tokens, key=lambda x: x["score"], reverse=True)
 
 openseaApi = 'https://api.opensea.io/api/v1/asset/' + token_contract_address + '/'
 threadCount = 50
@@ -352,7 +362,7 @@ def getThread(targetStack):
                         price = int(order["base_price"]) / 1000000000000000000
                         # print(price)
                         sortedTokens[count]["price"] = price
-                        sortedTokens[count]["score/price"] = float("{:.1f}".format(sortedTokens[count]["absolute score"] / price))
+                        sortedTokens[count]["score/price"] = float("{:.1f}".format(sortedTokens[count]["score"] / price))
                         break
 
         except Exception as e:
@@ -400,7 +410,7 @@ print('MILESTONE: OpenSea Prices Complete')
 # Export JSON to CSV
 df = pd.json_normalize(sortedTokens)
 df_reorder = df[columnOrder]
-df_reorder.to_csv('tokens.csv', index=True, encoding='utf-8')
+df_reorder.to_csv("exports/" + collection + "/tokens.csv", index=True, encoding='utf-8')
 #print('MILESTONE: Tokens CSV Sorted')
 
 
