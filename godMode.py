@@ -34,14 +34,14 @@ keywords = ["Rare", "rare", "Legendary", "legendary", "Special", "special"]
 ipfs = False
 url_suffix = ''
 
-collection = 'junglefreaks'
-url_stub = 'https://gateway.pinata.cloud/ipfs/QmbLN428fqXS97u7mvwdh2vVsCzCBWqdJuczJZjBjY1RRF/0000'
-token_contract_address = '0x7e6bc952d4b4bd814853301bee48e99891424de0'
-
 # Metasaurs
-#url_stub = "https://api.metasaurs.com/metadata/"
-#url_suffix = '.json'
-#token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
+url_stub = "https://api.metasaurs.com/metadata/"
+url_suffix = '.json'
+token_contract_address = '0xf7143ba42d40eaeb49b88dac0067e54af042e963'
+
+#collection = 'junglefreaks'
+#url_stub = 'https://gateway.pinata.cloud/ipfs/QmbLN428fqXS97u7mvwdh2vVsCzCBWqdJuczJZjBjY1RRF/0000'
+#token_contract_address = '0x7e6bc952d4b4bd814853301bee48e99891424de0'
 
 # Galactic Apes
 #url_stub = 'https://galacticapes.mypinata.cloud/ipfs/QmcX6g2xXiFP5j1iAfXREuP9EucRRpuMCAnoYaVYjtrJeK/'
