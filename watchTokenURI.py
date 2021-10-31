@@ -7,8 +7,7 @@ from web3 import Web3
 
 w3 = Web3(Web3.HTTPProvider('https://mainnet.infura.io/v3/14fa7483b0f04fda84abe10f54a721e1'))
 
-# MEKK's
-token_contract_address = '0x9a534628b4062e123ce7ee2222ec20b86e16ca8f'
+token_contract_address = '0x4be3223f8708ca6b30d1e8b8926cf281ec83e770'
 testTokenID = 1
 loop = True
 
