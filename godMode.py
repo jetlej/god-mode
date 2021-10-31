@@ -2,6 +2,7 @@ import requests
 import time 
 import datetime
 import threading
+import operator
 import os
 import math
 import json
@@ -17,7 +18,7 @@ test = True;
 if test == False: 
     waitForUpdate = True
     skipScrape = False
-    tokenCount = 8888
+    tokenCount = 10000
     threadCount = 50
     openSeaLimit = 500
     countBlanks = False
@@ -27,16 +28,24 @@ else:
     skipScrape = False
     tokenCount = 10000
     threadCount = 50
-    openSeaLimit = 1
-    countBlanks = True
+    openSeaLimit = 500
+    countBlanks = False
 
 keywords = ["Rare", "rare", "Legendary", "legendary", "Special", "special"]
 ipfs = False
 url_suffix = ''
 
-collection = 'junglefreaks'
-url_stub = 'https://gateway.pinata.cloud/ipfs/QmbLN428fqXS97u7mvwdh2vVsCzCBWqdJuczJZjBjY1RRF/0000'
-token_contract_address = '0x7e6bc952d4b4bd814853301bee48e99891424de0'
+collection = 'partydegens'
+url_stub = 'https://api.partydegenerates.com/degenerates/'
+token_contract_address = '0x4be3223f8708ca6b30d1e8b8926cf281ec83e770'
+
+#collection = 'headdao'
+#url_stub = 'https://whispering-fortress-75639.herokuapp.com/fetch/metadata/'
+#token_contract_address = '0xf62c6a8e7bcdc96cda11bd765b40afa9ffc19ab9'
+
+#collection = 'junglefreaks'
+#url_stub = 'ipfs://QmZCsdZ616bmjqrGM44MggF4CjVaTmVMa7baLG55WgGHCR/0000'
+#token_contract_address = '0x7e6bc952d4b4bd814853301bee48e99891424de0'
 
 # Metasaurs
 #url_stub = "https://api.metasaurs.com/metadata/"
@@ -111,30 +120,38 @@ if skipScrape == False:
 
 
 if waitForUpdate:
-  r = requests.get(url_stub + '1' + url_suffix, timeout=10)
-  initValue = r.text
-  print(initValue)
-  newValue = initValue
+    if (ipfs):
+        params = (('arg', url_stub + '1'),)
+        r = requests.post('https://ipfs.infura.io:5001/api/v0/cat', params=params, auth=(infuraIpfsId,infuraIpfsSecret))
+    else: 
+        r = requests.get(url_stub + '1' + url_suffix, timeout=10)
+    initValue = r.text
+    print(initValue)
+    newValue = initValue
 
-  cache = 1
-  #while cache < 3:
-  while newValue == initValue:
+    cache = 1
+    #while cache < 3:
+    while newValue == initValue:
       cache = cache + 1
       print("Not yet")
       time.sleep(10)
       try:
-        r = requests.get(url_stub + '1' + url_suffix + '?v=' + str(cache), timeout=10)
+        if (ipfs):
+            params = (('arg', url_stub + '1'),)
+            r = requests.post('https://ipfs.infura.io:5001/api/v0/cat', params=params, auth=(infuraIpfsId,infuraIpfsSecret))
+        else:
+            r = requests.get(url_stub + '1' + url_suffix + '?v=' + str(cache), timeout=10)
         #print(r.text)
         if not 'Error' in r.text:
             newValue = r.text
       except Exception as e:
         print(e)
 
-  print('--------------')
-  print('MILESTONE: TokenURI Updated!')
-  print(datetime.datetime.now())
-  print(newValue)
-  os.system("afplay alert.wav") 
+    print('--------------')
+    print('MILESTONE: TokenURI Updated!')
+    print(datetime.datetime.now())
+    print(newValue)
+    os.system("afplay alert.wav") 
 
 
 if skipScrape == False:
@@ -231,7 +248,7 @@ dict = {}
 total = 0
 result = []
 errors = []
-columnOrder = ['id', 'score', 'price', 'score/price', 'link', 'image']
+columnOrder = ['rank', 'id', 'score', 'price', 'score/price', 'link', 'image']
 for file in fstack:
     with open(file, "r") as f:
         try:
@@ -273,7 +290,7 @@ if countBlanks == True:
     i = 0
     for row in result:
         for c in columnOrder:
-            if not c in ['id', 'score', 'score %', 'price', 'score/price', 'link', 'image']:
+            if not c in ['rank', 'id', 'score', 'score %', 'price', 'score/price', 'link', 'image']:
                 if not '##' in c:
                     if not c in row:
                         result[i][c] = 'BLANK'
@@ -335,9 +352,15 @@ for token in list(tokens):
     tokens[i]["score"] = absoluteScore
     i += 1
 
-
 # Sort them by rarity score, and get OpenSea prices for the top 200
 sortedTokens = sorted(tokens, key=lambda x: x["score"], reverse=True)
+
+# Add a 'rank' field + empty price fields
+i = 0
+for row in list(sortedTokens):
+    sortedTokens[i]["rank"] = i + 1
+    sortedTokens[i]["score/price"] = 0
+    i += 1
 
 openseaApi = 'https://api.opensea.io/api/v1/asset/' + token_contract_address + '/'
 threadCount = 50
@@ -347,7 +370,8 @@ openseaErrors = []
 def getThread(targetStack):
     for link in targetStack:
         url = link["url"]
-        count = link["index"]
+        index = link["index"]
+        buyUrl = link["buyUrl"]
         #print(url, 'url')
         # print 'this is url => ',url
         # id = str(url.split('asset/' + token_contract_address + '/').pop())
@@ -361,8 +385,9 @@ def getThread(targetStack):
                     if order["maker"]["address"] == owner:
                         price = int(order["base_price"]) / 1000000000000000000
                         # print(price)
-                        sortedTokens[count]["price"] = price
-                        sortedTokens[count]["score/price"] = float("{:.1f}".format(sortedTokens[count]["score"] / price))
+                        sortedTokens[index]["price"] = price
+                        sortedTokens[index]["score/price"] = float("{:.1f}".format(sortedTokens[index]["score"] / price))
+                        print('#' + str(index) + ' - ' + str(price) + ' ETH - ' + buyUrl)
                         break
 
         except Exception as e:
@@ -379,7 +404,7 @@ def generate_stack():
         for y in range(0, tokensPerThread):
             count+=1
             #targetStack.append(openseaApi + str(sortedTokens[count]["id"]))
-            targetStack.append({"url": openseaApi + str(sortedTokens[count]["id"]), "index": count})
+            targetStack.append({"url": openseaApi + str(sortedTokens[count]["id"]), "index": count, "buyUrl": 'https://opensea.io/assets/' + str(token_contract_address) + '/' + str(sortedTokens[count]["id"]) })
         stack.append(targetStack)
     return stack
 
@@ -406,6 +431,10 @@ while True:
 print('elapsed time => ' + str(time.time() - tstamp))
 print('MILESTONE: OpenSea Prices Complete')
 
+# Order by price, then by rarity
+#sortedTokens = sorted(tokens, key=lambda x: x["price"], reverse=True)
+#sortedTokens = sorted(sortedTokens, key=lambda x: (x["score/price"], x["score"]), reverse=True)
+sortedTokens = sorted(sortedTokens, key = operator.itemgetter("score/price"), reverse=True)
 
 # Export JSON to CSV
 df = pd.json_normalize(sortedTokens)
